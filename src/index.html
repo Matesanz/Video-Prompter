@@ -1,0 +1,56 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Video Teleprompter</title>
+    <link rel="manifest" href="manifest.json">
+    <meta name="theme-color" content="#000000">
+    <meta name="description" content="A minimalistic video teleprompter PWA">
+    <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+    <div class="app-container">
+        <!-- Main controls -->
+        <div class="controls">
+            <button id="recordButton" class="record-btn">
+                <span class="record-icon"></span>
+                <span class="record-text">Start Recording</span>
+            </button>
+            
+            <div class="control-group">
+                <label for="speedSlider">Scroll Speed:</label>
+                <input type="range" id="speedSlider" min="50" max="300" value="120" class="slider">
+                <span id="speedValue">120 WPM</span>
+            </div>
+            
+            <div class="control-group">
+                <label for="textSizeSlider">Text Size:</label>
+                <input type="range" id="textSizeSlider" min="12" max="48" value="24" class="slider">
+                <span id="textSizeValue">24px</span>
+            </div>
+        </div>
+
+        <!-- Script box - draggable and resizable -->
+        <div id="scriptBox" class="script-box">
+            <div class="script-header">
+                <span class="drag-handle">≡</span>
+                <span class="script-title">Script</span>
+                <div class="resize-handle"></div>
+            </div>
+            <textarea id="scriptInput" placeholder="Paste your script here..." class="script-input unified-script"></textarea>
+        </div>
+
+        <!-- Video preview as background -->
+        <video id="videoPreview" class="video-background" autoplay muted playsinline></video>
+    </div>
+
+    <!-- Status indicator -->
+    <div id="statusIndicator" class="status-indicator">
+        <span id="statusText">Ready</span>
+        <div id="recordingDot" class="recording-dot"></div>
+    </div>
+
+    <script src="script.js"></script>
+</body>
+</html>

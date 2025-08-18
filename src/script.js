@@ -23,7 +23,47 @@ class VideoTeleprompter {
         this.init();
     }
     
+    checkCompatibility() {
+        console.log('Checking browser compatibility...');
+        
+        // Check MediaRecorder support
+        if (!window.MediaRecorder) {
+            console.error('MediaRecorder API not supported');
+            alert('Your browser does not support video recording. Please use a modern browser like Chrome, Firefox, or Safari.');
+            return;
+        }
+        
+        // Check supported MIME types
+        const supportedTypes = [];
+        const typesToCheck = [
+            'video/webm;codecs=vp9,opus',
+            'video/webm;codecs=vp8,opus',
+            'video/webm',
+            'video/mp4'
+        ];
+        
+        typesToCheck.forEach(type => {
+            if (MediaRecorder.isTypeSupported(type)) {
+                supportedTypes.push(type);
+            }
+        });
+        
+        console.log('Supported recording formats:', supportedTypes);
+        
+        if (supportedTypes.length === 0) {
+            console.warn('No standard video formats supported');
+            alert('Your browser may have limited video recording support. Recording may not work properly.');
+        }
+        
+        // iOS specific warnings
+        if (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad')) {
+            console.log('iOS device detected');
+            console.log('Note: iOS has limited MediaRecorder support. Recording may use different formats.');
+        }
+    }
+    
     async init() {
+        this.checkCompatibility();
         this.setupEventListeners();
         this.setupDragAndResize();
         this.loadSettings();
@@ -294,29 +334,63 @@ class VideoTeleprompter {
             }
             
             this.recordedChunks = [];
-            this.mediaRecorder = new MediaRecorder(this.stream, {
-                mimeType: 'video/webm;codecs=vp9,opus'
-            });
+            
+            // Check what MIME types are supported (iOS compatibility)
+            let mimeType = 'video/webm;codecs=vp9,opus';
+            
+            // iOS/Safari compatibility - try different formats
+            if (!MediaRecorder.isTypeSupported(mimeType)) {
+                console.log('WebM not supported, trying MP4...');
+                mimeType = 'video/mp4';
+                
+                if (!MediaRecorder.isTypeSupported(mimeType)) {
+                    console.log('MP4 not supported, trying WebM with VP8...');
+                    mimeType = 'video/webm;codecs=vp8,opus';
+                    
+                    if (!MediaRecorder.isTypeSupported(mimeType)) {
+                        console.log('VP8 not supported, trying basic WebM...');
+                        mimeType = 'video/webm';
+                        
+                        if (!MediaRecorder.isTypeSupported(mimeType)) {
+                            console.log('Using default MIME type');
+                            mimeType = '';
+                        }
+                    }
+                }
+            }
+            
+            console.log('Using MIME type:', mimeType || 'default');
+            
+            const options = mimeType ? { mimeType } : {};
+            this.mediaRecorder = new MediaRecorder(this.stream, options);
             
             this.mediaRecorder.ondataavailable = (event) => {
                 if (event.data.size > 0) {
                     this.recordedChunks.push(event.data);
+                    console.log('Data chunk received:', event.data.size, 'bytes');
                 }
             };
             
             this.mediaRecorder.onstop = () => {
+                console.log('Recording stopped, saving...');
                 this.saveRecording();
+            };
+            
+            this.mediaRecorder.onerror = (event) => {
+                console.error('MediaRecorder error:', event.error);
             };
             
             this.mediaRecorder.start(1000); // Collect data every second
             this.isRecording = true;
             
             this.recordButton.classList.add('recording');
+            console.log('Recording started successfully');
             
             this.startScrolling();
             
         } catch (error) {
             console.error('Failed to start recording:', error);
+            alert('Recording failed: ' + error.message);
         }
     }
     
@@ -332,19 +406,58 @@ class VideoTeleprompter {
     }
     
     saveRecording() {
-        const blob = new Blob(this.recordedChunks, { type: 'video/webm' });
+        console.log('Saving recording with', this.recordedChunks.length, 'chunks');
         
-        // Convert to MP4 if possible (simplified - in production, you'd use FFmpeg.js)
+        if (this.recordedChunks.length === 0) {
+            console.error('No recording data available');
+            alert('No recording data available. Recording may have failed.');
+            return;
+        }
+        
+        // Determine the MIME type based on what was actually recorded
+        let mimeType = 'video/webm';
+        let extension = 'webm';
+        
+        if (this.mediaRecorder && this.mediaRecorder.mimeType) {
+            mimeType = this.mediaRecorder.mimeType;
+            if (mimeType.includes('mp4')) {
+                extension = 'mp4';
+            }
+        }
+        
+        console.log('Creating blob with MIME type:', mimeType);
+        const blob = new Blob(this.recordedChunks, { type: mimeType });
+        console.log('Blob created with size:', blob.size, 'bytes');
+        
+        if (blob.size === 0) {
+            console.error('Empty blob created');
+            alert('Recording failed: No data recorded');
+            return;
+        }
+        
+        // Create download
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
         a.href = url;
-        a.download = `teleprompter-recording-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.webm`;
+        a.download = `teleprompter-recording-${new Date().toISOString().slice(0, 19).replace(/:/g, '-')}.${extension}`;
+        
+        // For iOS compatibility, try different approaches
+        if (navigator.userAgent.includes('iPhone') || navigator.userAgent.includes('iPad')) {
+            // iOS approach - open in new window if direct download fails
+            a.target = '_blank';
+            console.log('iOS detected, using target=_blank for download');
+        }
+        
+        document.body.appendChild(a);
         a.click();
+        document.body.removeChild(a);
         
         URL.revokeObjectURL(url);
+        console.log('Download initiated');
         
         setTimeout(() => {
             // Ready for next recording
+            console.log('Ready for next recording');
         }, 3000);
     }
     

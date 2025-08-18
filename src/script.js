@@ -6,17 +6,19 @@ class VideoTeleprompter {
         this.isScrolling = false;
         this.scrollAnimation = null;
         this.stream = null;
+        this.currentCamera = 'user'; // 'user' for front, 'environment' for back
+        this.isTextRotated = false;
         
         // DOM elements
         this.recordButton = document.getElementById('recordButton');
+        this.rotateButton = document.getElementById('rotateButton');
+        this.cameraButton = document.getElementById('cameraButton');
         this.scriptBox = document.getElementById('scriptBox');
         this.scriptInput = document.getElementById('scriptInput');
         this.speedSlider = document.getElementById('speedSlider');
         this.speedValue = document.getElementById('speedValue');
         this.textSizeSlider = document.getElementById('textSizeSlider');
         this.textSizeValue = document.getElementById('textSizeValue');
-        this.statusText = document.getElementById('statusText');
-        this.recordingDot = document.getElementById('recordingDot');
         
         this.init();
     }
@@ -31,9 +33,7 @@ class VideoTeleprompter {
         // Start camera feed immediately
         try {
             await this.setupCamera();
-            this.updateStatus('Ready to record');
         } catch (error) {
-            this.updateStatus('Camera access denied');
             console.error('Camera setup failed:', error);
             // Show a dark background if camera fails
             document.querySelector('.app-container').style.background = 'linear-gradient(135deg, #1a1a1a 0%, #2d2d2d 100%)';
@@ -43,6 +43,12 @@ class VideoTeleprompter {
     setupEventListeners() {
         // Record button
         this.recordButton.addEventListener('click', () => this.toggleRecording());
+        
+        // Rotate button
+        this.rotateButton.addEventListener('click', () => this.toggleTextRotation());
+        
+        // Camera switch button
+        this.cameraButton.addEventListener('click', () => this.switchCamera());
         
         // Speed slider
         this.speedSlider.addEventListener('input', () => this.updateSpeedDisplay());
@@ -115,7 +121,13 @@ class VideoTeleprompter {
             
             this.scriptBox.style.left = newLeft + 'px';
             this.scriptBox.style.top = newTop + 'px';
-            this.scriptBox.style.transform = 'none';
+            
+            // Preserve rotation state when dragging
+            if (this.isTextRotated) {
+                this.scriptBox.style.transform = 'rotate(90deg)';
+            } else {
+                this.scriptBox.style.transform = 'none';
+            }
             
             e.preventDefault();
         };
@@ -245,11 +257,16 @@ class VideoTeleprompter {
                 width: { ideal: 1920 },
                 height: { ideal: 1080 },
                 frameRate: { ideal: 30 },
-                facingMode: 'user' // Use front-facing camera by default
+                facingMode: this.currentCamera
             },
             audio: true
         };
-        
+
+        // Stop existing stream if any
+        if (this.stream) {
+            this.stream.getTracks().forEach(track => track.stop());
+        }
+
         this.stream = await navigator.mediaDevices.getUserMedia(constraints);
         
         // Setup video background
@@ -295,15 +312,11 @@ class VideoTeleprompter {
             this.isRecording = true;
             
             this.recordButton.classList.add('recording');
-            this.recordButton.querySelector('.record-text').textContent = 'Stop Recording';
-            this.recordingDot.classList.add('active');
-            this.updateStatus('Recording');
             
             this.startScrolling();
             
         } catch (error) {
             console.error('Failed to start recording:', error);
-            this.updateStatus('Recording failed');
         }
     }
     
@@ -313,9 +326,6 @@ class VideoTeleprompter {
             this.isRecording = false;
             
             this.recordButton.classList.remove('recording');
-            this.recordButton.querySelector('.record-text').textContent = 'Start Recording';
-            this.recordingDot.classList.remove('active');
-            this.updateStatus('Processing...');
             
             this.stopScrolling();
         }
@@ -332,10 +342,9 @@ class VideoTeleprompter {
         a.click();
         
         URL.revokeObjectURL(url);
-        this.updateStatus('Recording saved');
         
         setTimeout(() => {
-            this.updateStatus('Ready to record');
+            // Ready for next recording
         }, 3000);
     }
     
@@ -389,9 +398,44 @@ class VideoTeleprompter {
         this.scriptInput.scrollTop = 0;
     }
     
+    async switchCamera() {
+        try {
+            this.currentCamera = this.currentCamera === 'user' ? 'environment' : 'user';
+            await this.setupCamera();
+        } catch (error) {
+            console.error('Failed to switch camera:', error);
+            // Revert back to previous camera if switch fails
+            this.currentCamera = this.currentCamera === 'user' ? 'environment' : 'user';
+        }
+    }
+
+    toggleTextRotation() {
+        this.isTextRotated = !this.isTextRotated;
+        
+        if (this.isTextRotated) {
+            this.scriptBox.classList.add('rotated');
+            this.rotateButton.classList.add('active');
+            
+            // If the box has been positioned manually, apply rotation without centering
+            if (this.scriptBox.style.left && this.scriptBox.style.top) {
+                this.scriptBox.style.transform = 'rotate(90deg)';
+            }
+        } else {
+            this.scriptBox.classList.remove('rotated');
+            this.rotateButton.classList.remove('active');
+            
+            // If the box has been positioned manually, remove rotation
+            if (this.scriptBox.style.left && this.scriptBox.style.top) {
+                this.scriptBox.style.transform = 'none';
+            }
+        }
+        
+        this.saveSettings();
+    }
+
     updateSpeedDisplay() {
         const speed = this.speedSlider.value;
-        this.speedValue.textContent = speed + ' WPM';
+        this.speedValue.textContent = speed;
         
         // Update scrolling if active
         if (this.isScrolling) {
@@ -402,12 +446,8 @@ class VideoTeleprompter {
     
     updateTextSizeDisplay() {
         const size = this.textSizeSlider.value;
-        this.textSizeValue.textContent = size + 'px';
+        this.textSizeValue.textContent = size;
         this.scriptInput.style.fontSize = size + 'px';
-    }
-    
-    updateStatus(message) {
-        this.statusText.textContent = message;
     }
     
     saveSettings() {
@@ -415,13 +455,9 @@ class VideoTeleprompter {
             scriptText: this.scriptInput.value,
             scrollSpeed: this.speedSlider.value,
             textSize: this.textSizeSlider.value,
-            scriptBoxPosition: {
-                left: this.scriptBox.style.left,
-                top: this.scriptBox.style.top,
-                width: this.scriptBox.style.width,
-                height: this.scriptBox.style.height,
-                transform: this.scriptBox.style.transform
-            }
+            currentCamera: this.currentCamera,
+            isTextRotated: this.isTextRotated
+            // Removed scriptBoxPosition - let user position it fresh each time
         };
         
         localStorage.setItem('teleprompter-settings', JSON.stringify(settings));
@@ -446,15 +482,21 @@ class VideoTeleprompter {
                 this.textSizeSlider.value = settings.textSize;
                 this.updateTextSizeDisplay();
             }
-            
-            if (settings.scriptBoxPosition) {
-                const pos = settings.scriptBoxPosition;
-                if (pos.left) this.scriptBox.style.left = pos.left;
-                if (pos.top) this.scriptBox.style.top = pos.top;
-                if (pos.width) this.scriptBox.style.width = pos.width;
-                if (pos.height) this.scriptBox.style.height = pos.height;
-                if (pos.transform) this.scriptBox.style.transform = pos.transform;
+
+            if (settings.currentCamera) {
+                this.currentCamera = settings.currentCamera;
             }
+
+            if (settings.isTextRotated) {
+                this.isTextRotated = settings.isTextRotated;
+                if (this.isTextRotated) {
+                    this.scriptBox.classList.add('rotated');
+                    this.rotateButton.classList.add('active');
+                    // No need to handle positioning since we don't save positions anymore
+                }
+            }
+            
+            // Removed scriptBoxPosition loading - box starts in default position each time
         } catch (error) {
             console.error('Failed to load settings:', error);
         }

@@ -5,7 +5,13 @@ const STATIC_ASSETS = [
     BASE_PATH + '/',
     BASE_PATH + '/index.html',
     BASE_PATH + '/styles.css',
-    BASE_PATH + '/script.js',
+    BASE_PATH + '/app.js',
+    BASE_PATH + '/components/DragHandler.js',
+    BASE_PATH + '/components/ResizeHandler.js',
+    BASE_PATH + '/components/TouchHandler.js',
+    BASE_PATH + '/components/VideoComponent.js',
+    BASE_PATH + '/components/ScriptComponent.js',
+    BASE_PATH + '/components/ControlsComponent.js',
     BASE_PATH + '/manifest.json'
 ];
 

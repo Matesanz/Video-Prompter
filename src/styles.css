@@ -17,6 +17,70 @@ body {
     position: relative;
     width: 100vw;
     height: 100vh;
+    overflow: hidden;
+}
+
+/* Camera feed background */
+.video-background {
+    position: fixed;
+    top: 0;
+    left: 0;
+    width: 100vw;
+    height: 100vh;
+    object-fit: cover;
+    z-index: 1;
+    transform: scaleX(-1); /* Mirror the video like a selfie camera */
+}
+
+/* Recording Controls at Bottom */
+.recording-controls {
+    position: fixed;
+    bottom: 20px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 10px;
+    z-index: 1000;
+    background: rgba(0, 0, 0, 0.85);
+    padding: 15px 20px 20px 20px;
+    border-radius: 25px;
+    backdrop-filter: blur(15px);
+    border: 1px solid rgba(255, 255, 255, 0.15);
+    box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+}
+
+.all-controls-inline {
+    display: flex;
+    align-items: center;
+    gap: 15px;
+}
+
+.control-section {
+    display: flex;
+    align-items: center;
+}
+
+.separator {
+    color: #666;
+    font-size: 20px;
+    font-weight: 300;
+}
+
+body {
+    font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+    background: #1a1a1a;
+    color: #ffffff;
+    overflow: hidden;
+    height: 100vh;
+    touch-action: manipulation;
+}
+
+.app-container {
+    position: relative;
+    width: 100vw;
+    height: 100vh;
      .script-box {
         width: 95vw;
         height: 45vh;
@@ -82,17 +146,20 @@ body {
 }
 
 .record-btn {
-    background: #ff4444;
+    background: #333;
     color: white;
+    border: 2px solid #ff4444;
 }
 
 .record-btn:hover {
-    background: #ff6666;
+    background: #444;
+    border-color: #ff6666;
     transform: scale(1.1);
 }
 
 .record-btn.recording {
     background: #ff0000;
+    border-color: #ff0000;
     animation: pulse 1.5s infinite;
 }
 
@@ -121,14 +188,17 @@ body {
 }
 
 .record-icon {
-    width: 20px;
-    height: 20px;
-    background: white;
+    width: 16px;
+    height: 16px;
+    background: #ff4444;
     border-radius: 50%;
     position: relative;
+    border: 2px solid #ff4444;
 }
 
 .record-btn.recording .record-icon {
+    background: white;
+    border-color: white;
     border-radius: 4px;
     animation: recordingIcon 0.5s ease-in-out;
 }
@@ -146,6 +216,41 @@ body {
     display: flex;
     gap: 30px;
     align-items: center;
+}
+
+.button-group {
+    display: flex;
+    gap: 8px;
+    border-radius: 8px;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 4px;
+}
+
+.control-setting-btn {
+    padding: 8px 12px;
+    border: none;
+    border-radius: 6px;
+    background: transparent;
+    color: #cccccc;
+    font-size: 12px;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.3s ease;
+    min-width: 50px;
+}
+
+.control-setting-btn:hover {
+    background: rgba(255, 255, 255, 0.15);
+    color: #ffffff;
+}
+
+.control-setting-btn.active {
+    background: #4CAF50;
+    color: #ffffff;
+}
+
+.control-setting-btn.active:hover {
+    background: #66BB6A;
 }
 
 .control-group {
@@ -207,59 +312,70 @@ body {
 /* Script Box */
 .script-box {
     position: absolute;
-    top: 50%;
+    top: 5px; /* Position at the top of the window */
     left: 50%;
-    transform: translate(-50%, -50%);
+    transform: translateX(-50%);
     width: 600px;
-    height: 400px;
+    height: 300px;
     background: rgba(0, 0, 0, 0.1);
-    border: 2px solid rgba(255, 255, 255, 0.25);
+    border: 4px solid rgba(255, 255, 255, 0.25);
     border-radius: 12px;
     backdrop-filter: blur(20px);
     display: flex;
     flex-direction: column;
     overflow: hidden;
-    resize: both;
     min-width: 300px;
-    min-height: 200px;
+    min-height: 150px;
     max-width: 90vw;
-    max-height: 90vh;
+    max-height: 70vh;
     z-index: 100;
     box-shadow: 0 16px 48px rgba(0, 0, 0, 0.4);
+    /* Enable relative positioning for resize handle */
 }
 
-.script-header {
-    display: flex;
-    align-items: center;
-    justify-content: space-between;
-    padding: 12px 16px;
-    background: rgba(0, 0, 0, 0.9);
-    border-bottom: 1px solid rgba(255, 255, 255, 0.15);
-    cursor: move;
-    user-select: none;
+/* Resize handle styling */
+.script-resize-handle {
+    transition: background-color 0.2s ease;
+    z-index: 10;
 }
 
-.drag-handle {
-    font-size: 18px;
-    color: #888;
-    cursor: grab;
+.script-resize-handle-bottom {
+    position: absolute;
+    bottom: 0;
+    left: 10px; /* Leave space for side handles */
+    right: 10px; /* Leave space for side handles */
+    height: 10px;
+    background: rgba(255, 255, 255, 0.3);
+    cursor: ns-resize;
+    border-radius: 0 0 8px 8px;
 }
 
-.drag-handle:active {
-    cursor: grabbing;
+.script-resize-handle-left {
+    position: absolute;
+    left: 0;
+    top: 0;
+    bottom: 10px; /* Leave space for bottom handle */
+    width: 10px;
+    background: rgba(255, 255, 255, 0.3);
+    cursor: ew-resize;
+    border-radius: 12px 0 0 0;
 }
 
-.script-title {
-    font-weight: 600;
-    font-size: 16px;
+.script-resize-handle-right {
+    position: absolute;
+    right: 0;
+    top: 0;
+    bottom: 10px; /* Leave space for bottom handle */
+    width: 10px;
+    background: rgba(255, 255, 255, 0.3);
+    cursor: ew-resize;
+    border-radius: 0 12px 0 0;
 }
 
-.resize-handle {
-    width: 20px;
-    height: 20px;
-    background: linear-gradient(-45deg, transparent 40%, #666 40%, #666 60%, transparent 60%);
-    cursor: se-resize;
+.script-resize-handle:hover {
+    background: rgba(255, 255, 255, 0.6);
 }
+
 
 .script-input {
     width: 100%;
@@ -276,7 +392,8 @@ body {
 }
 
 .script-input.unified-script {
-    height: calc(100% - 60px);
+    height: calc(100% - 10px); /* Account for bottom resize handle */
+    padding: 16px 26px 16px 26px; /* Account for left and right resize handles */
     border-bottom: none;
     font-size: 24px;
     line-height: 1.6;
@@ -300,7 +417,7 @@ body {
 /* Text rotation for landscape mode */
 /* Rotation for centered box (default position) */
 .script-box.rotated:not([style*="left"]) {
-    transform: translate(-50%, -50%) rotate(90deg);
+    transform: translateX(-50%) rotate(90deg);
 }
 
 /* Responsive Design */
@@ -311,58 +428,66 @@ body {
         max-width: 90vw;
     }
     
-    .control-buttons {
+    .all-controls-inline {
         gap: 10px;
     }
     
     .control-btn {
-        width: 50px;
-        height: 50px;
+        width: 45px;
+        height: 45px;
+        font-size: 14px;
+    }
+    
+    .control-setting-btn {
+        padding: 6px 8px;
+        font-size: 11px;
+        min-width: 40px;
+    }
+    
+    .separator {
         font-size: 16px;
-    }
-    
-    .sliders-container {
-        gap: 20px;
-    }
-    
-    .slider {
-        width: 60px;
     }
     
     .script-box {
         width: 90vw;
-        height: 50vh;
-        top: 40%;
+        height: 40vh;
+        top: 0px; /* Keep at top for mobile */
     }
 }
 
 @media (max-width: 480px) {
     .recording-controls {
-        flex-direction: column;
-        gap: 10px;
+        padding: 10px;
+        gap: 8px;
     }
     
-    .sliders-container {
-        flex-direction: column;
-        gap: 10px;
+    .all-controls-inline {
+        flex-wrap: wrap;
+        gap: 8px;
+        justify-content: center;
     }
     
-    .control-group {
-        flex-direction: row;
-        justify-content: space-between;
-        align-items: center;
-        gap: 10px;
+    .control-btn {
+        width: 40px;
+        height: 40px;
+        font-size: 12px;
+    }
+    
+    .control-setting-btn {
+        padding: 4px 6px;
+        font-size: 10px;
+        min-width: 35px;
+    }
+    
+    .separator {
+        font-size: 14px;
+        display: none; /* Hide separators on very small screens */
     }
     
     .script-box {
         width: 95vw;
-        height: 45vh;
-    }
-}
-    
-    .script-box {
-        width: 95vw;
-        height: 50vh;
+        height: 35vh;
+        top: 10px; /* Keep at top for mobile */
     }
     
     .script-display {
@@ -402,16 +527,6 @@ body {
     100% { 
         transform: translateY(-80%); 
     }
-}
-
-/* Touch interactions */
-.script-box.dragging {
-    transition: none;
-    user-select: none;
-}
-
-.script-box.resizing {
-    transition: none;
 }
 
 /* Accessibility */
